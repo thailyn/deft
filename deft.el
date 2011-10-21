@@ -587,18 +587,48 @@ absolute filenames.  These absolute filenames are used as keys
 for the various hash tables used for storing file metadata and
 contents.  So, any functions looking up values in these hash
 tables should use `expand-file-name' on filenames first."
-  (if (file-exists-p deft-directory)
+  (deft-find-all-files-directory deft-directory))
+
+(defun deft-find-all-files-directory (directory)
+  "Return a list of all files in a specified directory and
+its subdirectories."
+  (if (file-exists-p directory)
       (let (files result)
         ;; List all files
         (setq files
-              (directory-files deft-directory t
+              (directory-files directory t
                                (concat "\." deft-extension "$") t))
+        ;;  TODO: Instead of getting list of files in a directory twice, get
+        ;; it once and then iterate over each file and decide what to do.
+        ;; First, check if it is readable.  Then, if it is a directory,
+        ;; recruse into that directory.  If not, then if it matches the
+        ;; deft-extension regex, add it to the list.  Thus, the initial file
+        ;; list of the directory is not limited by the deft-regex from the
+        ;; start, but tested later on, individually.  I hope this is not too
+        ;; much of a sacrifice in terms of speed.
         ;; Filter out files that are not readable or are directories
         (dolist (file files)
           (when (and (file-readable-p file)
                      (not (file-directory-p file)))
             (setq result (cons file result))))
-        result)))
+
+        (setq files
+              (directory-files directory t nil t))
+        ;; Filter out files that are not readable or are not directories
+        (dolist (file files)
+          (when (and (file-readable-p file)
+                     (file-directory-p file)
+                     (not (equal (file-name-nondirectory file) ".."))
+                     (not (equal (file-name-nondirectory file) ".")))
+            (let (subfiles)
+              (setq subfiles (deft-find-all-files-directory file))
+              (when (not (null subfiles))
+                (setq result (nconc subfiles result))))))
+;            (setq result (append result (deft-find-all-files-directory file)))))
+;            (setq result (cons result (deft-find-all-files-directory file)))))
+;            (setq result (cons (car (deft-find-all-files-directory file)) result))))
+        result))
+  )
 
 (defun deft-strip-title (title)
   "Remove all strings matching `deft-strip-title-regexp' from TITLE."
