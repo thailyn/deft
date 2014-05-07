@@ -551,7 +551,7 @@ title."
 (defun deft-open-file (file)
   "Open FILE in a new buffer and setting its mode."
   (prog1 (find-file file)
-    (funcall deft-text-mode)
+    ;(funcall deft-text-mode)
     (add-to-list 'deft-auto-save-buffers (buffer-name))
     (add-hook 'after-save-hook
               (lambda () (save-excursion (deft-refresh)))
